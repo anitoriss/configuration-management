@@ -1,0 +1,103 @@
+"""Assembler for educational VM, variant 26 (stages 1 and 2)."""
+
+import argparse
+from dataclasses import dataclass
+from pathlib import Path
+import re
+
+
+OPCODES = {
+    "LOAD_CONST": 4,
+    "LOAD_MEM": 15,
+    "STORE_MEM": 0,
+    "GE": 13,
+}
+COMMAND_BYTES = 5
+MAX_CONSTANT = (1 << 10) - 1
+MAX_ADDRESS = (1 << 29) - 1
+
+
+@dataclass(frozen=True)
+class Instruction:
+    """Intermediate representation of one VM instruction."""
+
+    name: str
+    a: int
+    b: int | None = None
+
+
+PATTERNS = (
+    ("LOAD_CONST", re.compile(r"ACC\s*=\s*(\d+)\Z")),
+    ("LOAD_MEM", re.compile(r"ACC\s*=\s*MEM\s*\[\s*ACC\s*\]\Z")),
+    ("STORE_MEM", re.compile(r"MEM\s*\[\s*(\d+)\s*\]\s*=\s*ACC\Z")),
+    ("GE", re.compile(
+        r"MEM\s*\[\s*(\d+)\s*\]\s*=\s*"
+        r"MEM\s*\[\s*\1\s*\]\s*>=\s*ACC\Z"
+    )),
+)
+
+
+def parse_line(text: str, line_number: int) -> Instruction | None:
+    """Parse one algebraic statement into opcode fields A and B."""
+    statement = text.split("#", maxsplit=1)[0].strip()
+    if not statement:
+        return None
+    for name, pattern in PATTERNS:
+        match = pattern.fullmatch(statement)
+        if match is None:
+            continue
+        operand = int(match.group(1)) if match.groups() else None
+        limit = MAX_CONSTANT if name == "LOAD_CONST" else MAX_ADDRESS
+        if operand is not None and operand > limit:
+            raise ValueError(f"Line {line_number}: B out of range (0..{limit})")
+        return Instruction(name, OPCODES[name], operand)
+    raise ValueError(f"Line {line_number}: invalid statement: {statement}")
+
+
+def parse_program(source: str) -> list[Instruction]:
+    """Translate textual instructions to intermediate representation."""
+    result = []
+    for number, line in enumerate(source.splitlines(), start=1):
+        instruction = parse_line(line, number)
+        if instruction is not None:
+            result.append(instruction)
+    return result
+
+
+def print_fields(program: list[Instruction]) -> None:
+    """Show instructions in field/value format required by stage 1."""
+    for index, instruction in enumerate(program, start=1):
+        fields = f"A={instruction.a}"
+        if instruction.b is not None:
+            fields += f", B={instruction.b}"
+        print(f"{index}. {instruction.name}: {fields}")
+
+
+def make_parser() -> argparse.ArgumentParser:
+    """Configure command-line arguments."""
+    parser = argparse.ArgumentParser(description="VM assembler, variant 26")
+    parser.add_argument("source", type=Path, help="Source program file")
+    parser.add_argument("output", type=Path, help="Output binary file")
+    parser.add_argument("--test", action="store_true", help="Show fields and bytes")
+    return parser
+
+
+def main() -> None:
+    """Run the assembler CLI."""
+    args = make_parser().parse_args()
+    try:
+        program = parse_program(args.source.read_text(encoding="utf-8"))
+        if args.test:
+            print_fields(program)
+        data = assemble(program)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_bytes(data)
+        print(f"Assembled instructions: {len(program)}")
+        if args.test:
+            print_bytes(data)
+    except (ValueError, OSError) as error:
+        raise SystemExit(f"Error: {error}") from error
+
+
+if __name__ == "__main__":
+    main()
