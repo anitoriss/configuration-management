@@ -1,4 +1,6 @@
-# Конфигурационное управление — вариант 26
+# configuration-management
+
+**Конфигурационное управление · Вариант №26 · Этапы 1–2**
 
 Ассемблер учебной виртуальной машины (УВМ), первые два этапа практической
 работы из сборника № 3 (РТУ МИРЭА, ИКБО-41-25, 2026).
@@ -58,3 +60,22 @@ GE:         A=13, B=124 -> 0xCD, 0x07, 0x00, 0x00, 0x00
 - `feat(encoder): generate five-byte machine instructions` — этап 2
 
 Интерпретатор и выполнение инструкций относятся к этапам 3–5 и пока не реализованы.
+
+
+## Публикация на GitHub
+
+Предназначен для нового публичного репозитория
+`anitoriss/configuration-management`.
+Репозиторий нужно создать пустым (без README, .gitignore и лицензии).
+Проект уже содержит историю двух коммитов — по одному на каждый этап.
+
+После восстановления истории Git и перехода в папку
+`configuration-management` команда публикации:
+
+```powershell
+git remote add origin https://github.com/anitoriss/configuration-management.git
+git push -u origin main
+```
+
+Если `origin` уже существует, используйте вместо `remote add`:
+`git remote set-url origin https://github.com/anitoriss/configuration-management.git`.
